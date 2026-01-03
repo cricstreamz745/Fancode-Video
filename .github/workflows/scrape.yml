@@ -1,19 +1,19 @@
-name: FanCode Scraper
+name: FanCode Auto JSON Scraper
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */6 * * *"   # runs every 6 hours (optional)
+    - cron: "0 */6 * * *"   # every 6 hours
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -26,8 +26,10 @@ jobs:
         run: |
           python runner.py
 
-      - name: Upload JSON artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: fancode-output
-          path: output.json
+      - name: Commit & push JSON
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add output.json
+          git commit -m "Auto update FanCode JSON" || echo "No changes"
+          git push
