@@ -7,4 +7,4 @@ if __name__ == "__main__":
     with open("output.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    print("JSON saved as output.json")
+    print("output.json updated")
