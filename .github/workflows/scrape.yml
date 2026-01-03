@@ -1,16 +1,30 @@
-name: FanCode Auto JSON Scraper
+name: Fetch Stream URL
 
 on:
+  # Manual trigger from Actions tab
   workflow_dispatch:
+    inputs:
+      url:
+        description: "Optional (ignored – script auto-fetches FanCode JSON)"
+        required: false
+        default: ""
+      max_wait:
+        description: "Max seconds the script should wait for m3u8"
+        required: false
+        default: "15"
+
+  # Auto run every 6 hours (UTC)
   schedule:
-    - cron: "0 */6 * * *"   # every 6 hours
+    - cron: "0 */6 * * *"
 
 jobs:
-  scrape:
+  fetch:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -18,18 +32,56 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-      - name: Run scraper
+      - name: Install Chromium + Chromedriver
         run: |
-          python runner.py
+          sudo apt-get update -y
+          sudo apt-get install -y chromium chromium-driver
 
-      - name: Commit & push JSON
+          echo "Chromium version:"
+          chromium --version || true
+          chromedriver --version || true
+
+          echo "CHROMEDRIVER_PATH=$(which chromedriver)" >> $GITHUB_ENV
+
+      - name: Install Python dependencies
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add output.json
-          git commit -m "Auto update FanCode JSON" || echo "No changes"
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install selenium webdriver-manager requests
+          fi
+
+      - name: Run Selenium script (🟢 CLICK TO VIEW RESULTS)
+        env:
+          MAX_WAIT_SECONDS: ${{ github.event.inputs.max_wait || '15' }}
+          CHROMEDRIVER_PATH: ${{ env.CHROMEDRIVER_PATH }}
+        run: |
+          echo "Running FanCode bulk m3u8 scraper"
+          echo "MAX_WAIT_SECONDS=${MAX_WAIT_SECONDS}"
+          python fetch_stream.py 2>&1 | tee fetch_stream_output.txt
+
+      - name: Upload run log
+        uses: actions/upload-artifact@v4
+        with:
+          name: fetch-stream-log
+          path: fetch_stream_output.txt
+
+      - name: Commit m3u8.json to repo
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add m3u8.json
+          git status
+
+          git commit -m "auto: update m3u8.json" || echo "No changes to commit"
           git push
