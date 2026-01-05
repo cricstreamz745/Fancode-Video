@@ -4,7 +4,7 @@ import re
 import os
 from urllib.parse import urljoin
 
-URL = "https://www.fancode.com/cricket/tour/bangladesh-premier-league-2025-26-19256675/video-highlights"
+URL = "https://www.willow.tv/videos"
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Linux; Android 9; Termux) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36",
